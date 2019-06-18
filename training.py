@@ -1,8 +1,8 @@
 import gym
 import numpy as np
 import pandas as pd
-import random
 
+import random
 import pdb
 
 class QLearn:
@@ -30,17 +30,22 @@ class QLearn:
         Q_vals_this_state = [self.getQ(state, a) for a in self.actions]
 
         # randomness to get out of local minima
-        # if random.random() < self.epsilon:
-        #     for pos in range(len(Q_vals_this_state)):
-        #         Q_vals_this_state[pos] += random.random()
+        if random.random() < self.epsilon:
+            min_Q_val = min(Q_vals_this_state)
+            max_Q_val = max(Q_vals_this_state)
+            mag = max(abs(min_Q_val), abs(max_Q_val))
+
+            for pos in range(len(Q_vals_this_state)):
+                Q_vals_this_state[pos] += random.random() * mag - .5 * mag
 
         max_Q_val = max(Q_vals_this_state)
         max_indices = [i for i, Q_val in enumerate(Q_vals_this_state) if Q_val == max_Q_val]
+        # print(max_indices)
 
         if len(max_indices) > 1:
-            idx = random.randint(0, len(max_indices)-1)
+            idx = max_indices[random.randint(0, len(max_indices)-1)]
         else:
-            idx = 0
+            idx = max_indices[0]
 
 
         return self.actions[idx]
@@ -55,14 +60,14 @@ if __name__ == '__main__':
     env = gym.make('CartPole-v0')
     steps_history = np.ndarray(0)
 
-    alpha = 0.1
-    gamma = 0.7
-    epsilon = 0.05
+    alpha = 0.5
+    gamma = 0.9
+    epsilon = 0.1
     actions = range(env.action_space.n)
 
     qlearn = QLearn(alpha, gamma, epsilon, actions)
 
-    n_episodes = 50
+    n_episodes = 100
     n_goal_steps = 195
     n_bins = 8
     n_bins_angle = 10
@@ -111,5 +116,10 @@ if __name__ == '__main__':
                 qlearn.learn(state, action, reward, next_state)
                 state = next_state
 
+    # Observe training results
     print("avg number of steps taken is: ", np.mean(steps_history))
+
+    steps_history[::-1].sort()
+    print(steps_history)
+
     env.close()
