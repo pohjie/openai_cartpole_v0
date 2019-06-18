@@ -1,6 +1,8 @@
 import gym
 import numpy as np
 import pandas as pd
+import random
+
 import pdb
 
 class QLearn:
@@ -25,8 +27,23 @@ class QLearn:
             self.q[(state, action)] = (1 - self.alpha) * old_val + self.alpha * (reward + self.gamma * maxQ_next_state)
 
     def choose_action(self, state):
-        print('nah')
+        Q_vals_this_state = [self.getQ(state, a) for a in self.actions]
 
+        # randomness to get out of local minima
+        # if random.random() < self.epsilon:
+        #     for pos in range(len(Q_vals_this_state)):
+        #         Q_vals_this_state[pos] += random.random()
+
+        max_Q_val = max(Q_vals_this_state)
+        max_indices = [i for i, Q_val in enumerate(Q_vals_this_state) if Q_val == max_Q_val]
+
+        if len(max_indices) > 1:
+            idx = random.randint(0, len(max_indices)-1)
+        else:
+            idx = 0
+
+
+        return self.actions[idx]
 
 def build_state(features):
     return int("".join(map(lambda feature: str(int(feature)), features)))
@@ -40,12 +57,12 @@ if __name__ == '__main__':
 
     alpha = 0.1
     gamma = 0.7
-    epsilon = 0.1
-    actions = [0, 1]
+    epsilon = 0.05
+    actions = range(env.action_space.n)
 
     qlearn = QLearn(alpha, gamma, epsilon, actions)
 
-    n_episodes = 100
+    n_episodes = 50
     n_goal_steps = 195
     n_bins = 8
     n_bins_angle = 10
@@ -68,12 +85,12 @@ if __name__ == '__main__':
                              to_bin(angular_change, angle_rate_bins)])
 
         for t in range(n_goal_steps):
-            env.render()
+            # env.render()
             print(observation)
 
             # select random initial state
-            # TODO: Change with choose_action- should not be random
-            action = env.action_space.sample()
+            action = qlearn.choose_action(state)
+            print(action)
             observation, reward, done, info = env.step(action) 
 
             cart_pos, pole_angle, cart_vel, angular_change = observation
@@ -86,12 +103,13 @@ if __name__ == '__main__':
             if done:
                 reward = -200 # update reward from 0 to become -200
                 qlearn.learn(state, action, reward, next_state)
-                steps_history = np.append(steps_history, [t]) # keep track of our learnign progress
+                steps_history = np.append(steps_history, [t+1]) # keep track of our learnign progress
                 print("Episode finished after {} timesteps".format(t+1))
                 break
             # game still in progress
             else:
                 qlearn.learn(state, action, reward, next_state)
+                state = next_state
 
     print("avg number of steps taken is: ", np.mean(steps_history))
     env.close()
